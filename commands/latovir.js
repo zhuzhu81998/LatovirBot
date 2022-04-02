@@ -125,6 +125,7 @@ module.exports = {
         
         const game = gamedb.define('game', table.rGame());
     
+        let data_provinces;
         const commandArg = args.shift().toLowerCase();
         switch(commandArg){
             case 'new':
@@ -228,15 +229,24 @@ module.exports = {
             case 'delete':
                 switch(args.shift().toLowerCase()){
                     case 'army':
-                        const id = args.shift().toLowerCase();
+                        const army_id = args.shift().toLowerCase();
                         (async () => {
-                            const res = await armies.destroy({ where: { a_id:  id} });
+                            const res = await armies.destroy({ where: { a_id:  army_id} });
                             return res;
                         })()
                         .then(res => {
                             message.react('👌');
                         });
                         break;
+                    case 'province':
+                        const province_id = args.shift().toLowerCase();
+                        (async () => {
+                            const res = await provinces.destroy({ where: { p_id:  province_id} });
+                            return res;
+                        })()
+                        .then(res => {
+                            message.react('👌');
+                        });
                 }
                 break;
             
@@ -315,7 +325,7 @@ module.exports = {
                 (async () => {
                     const result = await armies.update({ 
                         a_faction_id: args[1],
-                        a_level: [2],
+                        a_level: args[2],
                         a_strength: args[3],
                         a_location_id: args[4] }, { where: { a_id: args[0] } });
                     if(result > 1){
@@ -386,7 +396,23 @@ module.exports = {
                             (async () => {
                                 const f_provinces = await provinces.findAll({ where: { p_lord: cur_f_id } });
                                 for(let j = 0; f_provinces[j] != undefined; j++){
-                                    f_money += f_provinces[j].get('p_income') * (1 + f_provinces[j].get('p_level') * 0.1);
+                                    if(f_provinces[j].get('p_income') == -1){
+                                        const other_provinces = await provinces.findAll({
+                                            where: {
+                                                p_lord: {
+                                                    [Op.ne]: cur_f_id
+                                                }
+                                            }
+                                        });
+                                        let income_oth_prov = 0;
+                                        for(let k = 0; other_provinces[k] != undefined; k++){
+                                            income_oth_prov += other_provinces[k].get('p_income');
+                                        }
+                                        f_money += (income_oth_prov / 11) * (1 + f_provinces[j].get('p_level') * 0.1);
+                                    }
+                                    else{
+                                        f_money += f_provinces[j].get('p_income') * (1 + f_provinces[j].get('p_level') * 0.1);
+                                    }
                                 }
                                 if(f_provinces[j].get('p_autonom') == 1){
                                     f_money *= 0.2;
@@ -416,6 +442,7 @@ module.exports = {
             
             case 'add_money':
                 break;
+            
             case 'update_province':
                 (async () => {
                     const result = await provinces.update({ 
@@ -447,7 +474,7 @@ module.exports = {
                 break;
 
             case 'list_provinces':
-                let data_provinces = `the list of Provinces:\nProvince ID - Province Name - Province Level - Province Autonomity - Province Lord ID - Province Defender Mod - Province Income\n`;
+                data_provinces = `the list of Provinces:\nProvince ID - Province Name - Province Level - Province Autonomity - Province Lord ID - Province Defender Mod - Province Income\n`;
                 try {
                     (async () => {
                         const list_provinces = await provinces.findAll({})
@@ -471,7 +498,32 @@ module.exports = {
                     console.error(err);
                 }
                 break;
-            
+
+            case 'list_prov_land':
+                data_provinces = `the list of Provinces:\nProvince ID - Province Name - Province Level - Province Autonomity - Province Lord ID - Province Defender Mod - Province Income\n`;
+                try {
+                    (async () => {
+                        const list_provinces = await provinces.findAll({ where : { p_lord: args[0] }})
+                        .catch(err => { 
+                            message.reply(`something went wrong`);
+                            console.error(err);
+                        });
+                        for(let i = 0; list_provinces[i] != undefined; i++){
+                            data_provinces += `${i+1}. **${list_provinces[i].get('p_id')}** - ${list_provinces[i].get('p_name')} - ${list_provinces[i].get('p_level')} - ${list_provinces[i].get('p_autonom')} - ${list_provinces[i].get(`p_lord`)} - ${list_provinces[i].get(`p_army_modification`)} - ${list_provinces[i].get(`p_income`)}\n`;
+                        }
+                        const i_provinces_data = Math.ceil(data_provinces.length / 2000);
+                        let data_split_provinces = new Array(i_provinces_data);
+                        for(let i = 0; i < i_provinces_data; i++){
+                            data_split_provinces[i] = data_provinces.substring(i * 2000, (i + 1) * 2000);
+                            message.reply(data_split_provinces[i]);
+                        }
+                    })();
+                }
+                catch(err) {
+                    message.reply(`something went wrong`);
+                    console.error(err);
+                }
+                break;
             default:
                 message.reply(`no such command!`);
                 break;
