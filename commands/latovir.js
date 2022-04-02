@@ -24,7 +24,7 @@ module.exports = {
         return (X / n - p);
     },
 
-    battle(message, attacker_army_id_array, defender_army_id_array, p_army_modification, armies){
+    battle(message, attacker_army_id_array, defender_army_id_array, a_army_mod, p_army_modification, armies){
         let attacker_army_strength = 0;
         let attacker_number = 0;
         let attacker_basic_strength = 0;
@@ -51,6 +51,7 @@ module.exports = {
         }
         //Defender Advantages
         defender_army_strength += (defender_army_strength * p_army_modification);
+        attacker_army_strength += (attacker_army_strength * a_army_mod);
         const sum_army_strength = attacker_army_strength + defender_army_strength;
         const sum_army_basic_strength = attacker_basic_strength + defender_basic_strength;
         //console.log(defender_army_strength);
@@ -134,9 +135,9 @@ module.exports = {
                                 const newarmy = await armies.create({
                                     a_id: args[0],
                                     a_faction_id: args[1],
-                                    a_level: 0,
-                                    a_strength: args[2],
-                                    a_location_id: args[3]
+                                    a_level: [2],
+                                    a_strength: args[3],
+                                    a_location_id: args[4]
                                 }).catch( err => { console.error(err); });
         
                                 return newarmy;
@@ -275,7 +276,12 @@ module.exports = {
                         for(let i = 0; list_armies[i] != undefined; i++){
                             data += `${i+1}. **${list_armies[i].get('a_id')}** - ${list_armies[i].get('a_faction_id')} - ${list_armies[i].get('a_level')} - ${list_armies[i].get(`a_strength`)} - ${list_armies[i].get(`a_location_id`)}\n`;
                         }
-                        message.reply(data, { split: true });
+                        const i_armies_data = Math.ceil(data.length / 2000);
+                        let data_split_armies = new Array(i_armies_data);
+                        for(let i = 0; i < i_armies_data; i++){
+                            data_split_armies[i] = data.substring(i * 2000, (i + 1) * 2000);
+                            message.reply(data_split_armies[i]);
+                        }
                     })();
                 }
                 catch(err) {
@@ -307,31 +313,11 @@ module.exports = {
 
             case 'upgrade_army':
                 (async () => {
-                    const result = await armies.update({ a_level: args[1] }, { where: { a_id: args[0] } });
-                    if(result > 1){
-                        throw 'unique error';
-                    }
-                    return result;
-                })().then(result => {
-                    if(result != undefined && result != null){
-                        message.react('👌')
-                        .catch(err => {
-                            console.error(err);
-                        });
-                    }
-                    else{
-                        message.reply(`something went wrong`);
-                    }
-                })
-                .catch(err => {
-                    message.reply(`something went wrong`);
-                    console.error(err);
-                });
-                break;
-            
-            case 'set_strength':
-                (async () => {
-                    const result = await armies.update({ a_strength: args[1] }, { where: { a_id: args[0] } });
+                    const result = await armies.update({ 
+                        a_faction_id: args[1],
+                        a_level: [2],
+                        a_strength: args[3],
+                        a_location_id: args[4] }, { where: { a_id: args[0] } });
                     if(result > 1){
                         throw 'unique error';
                     }
@@ -354,6 +340,7 @@ module.exports = {
                 break;
 
             case 'battle':
+                const a_army_mod = args.shift().toLowerCase();
                 const p_army_modification = args.shift().toLowerCase();
                 const attacker_number = args.shift().toLowerCase();
                 let attacker_army_id_array = new Array(attacker_number);
@@ -377,7 +364,7 @@ module.exports = {
                         return defender_army_id_array;
                     })()
                     .then( defender_army_id_array => {
-                        this.battle(message, attacker_army_id_array, defender_army_id_array, p_army_modification, armies);
+                        this.battle(message, attacker_army_id_array, defender_army_id_array, a_army_mod, p_army_modification, armies);
                     });
                 });
                 break;
@@ -399,7 +386,10 @@ module.exports = {
                             (async () => {
                                 const f_provinces = await provinces.findAll({ where: { p_lord: cur_f_id } });
                                 for(let j = 0; f_provinces[j] != undefined; j++){
-                                    f_money += f_provinces[j].get('p_income');
+                                    f_money += f_provinces[j].get('p_income') * (1 + f_provinces[j].get('p_level') * 0.1);
+                                }
+                                if(f_provinces[j].get('p_autonom') == 1){
+                                    f_money *= 0.2;
                                 }
                                 const result = await factions.update({ f_gold: f_money }, { where: { f_id: cur_f_id } });
                                 return result;
@@ -428,7 +418,13 @@ module.exports = {
                 break;
             case 'update_province':
                 (async () => {
-                    const result = await provinces.update({ p_level: args[1], p_autonom: args[2] }, { where: { p_id: args[0] } });
+                    const result = await provinces.update({ 
+                        p_name: args[1],
+                        p_level: args[2],
+                        p_autonom: args[3],
+                        p_lord: args[4],
+                        p_army_modification: args[5],
+                        p_income: args[6] }, { where: { p_id: args[0] } });
                     if(result != 1){
                         throw 'unique error';
                     }
@@ -462,7 +458,12 @@ module.exports = {
                         for(let i = 0; list_provinces[i] != undefined; i++){
                             data_provinces += `${i+1}. **${list_provinces[i].get('p_id')}** - ${list_provinces[i].get('p_name')} - ${list_provinces[i].get('p_level')} - ${list_provinces[i].get('p_autonom')} - ${list_provinces[i].get(`p_lord`)} - ${list_provinces[i].get(`p_army_modification`)} - ${list_provinces[i].get(`p_income`)}\n`;
                         }
-                        message.reply(data_provinces, { split: true });
+                        const i_provinces_data = Math.ceil(data_provinces.length / 2000);
+                        let data_split_provinces = new Array(i_provinces_data);
+                        for(let i = 0; i < i_provinces_data; i++){
+                            data_split_provinces[i] = data_provinces.substring(i * 2000, (i + 1) * 2000);
+                            message.reply(data_split_provinces[i]);
+                        }
                     })();
                 }
                 catch(err) {
