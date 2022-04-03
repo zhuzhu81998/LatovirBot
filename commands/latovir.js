@@ -408,14 +408,16 @@ module.exports = {
                                         for(let k = 0; other_provinces[k] != undefined; k++){
                                             income_oth_prov += other_provinces[k].get('p_income');
                                         }
-                                        f_money += (income_oth_prov / 11) * (1 + f_provinces[j].get('p_level') * 0.1);
+                                        f_money += (income_oth_prov / 11) * (1 + f_provinces[j].get('p_level') * 0.1) * 0.5;
                                     }
                                     else{
-                                        f_money += f_provinces[j].get('p_income') * (1 + f_provinces[j].get('p_level') * 0.1);
+                                        if(f_provinces[j].get('p_autonom') == 1){
+                                            f_money += f_provinces[j].get('p_income') * (1 + f_provinces[j].get('p_level') * 0.1) * 0.2;
+                                        }
+                                        else{
+                                            f_money += f_provinces[j].get('p_income') * (1 + f_provinces[j].get('p_level') * 0.1);
+                                        }
                                     }
-                                }
-                                if(f_provinces[j].get('p_autonom') == 1){
-                                    f_money *= 0.2;
                                 }
                                 const result = await factions.update({ f_gold: f_money }, { where: { f_id: cur_f_id } });
                                 return result;
@@ -440,7 +442,29 @@ module.exports = {
                 }
                 break;
             
-            case 'add_money':
+            case 'set_money':
+                (async () => {
+                    const result = await factions.update({ 
+                        f_gold: args[1] }, { where: { f_id: args[0] } });
+                    if(result > 1){
+                        throw 'unique error';
+                    }
+                    return result;
+                })().then(result => {
+                    if(result != undefined && result != null){
+                        message.react('👌')
+                        .catch(err => {
+                            console.error(err);
+                        });
+                    }
+                    else{
+                        message.reply(`something went wrong`);
+                    }
+                })
+                .catch(err => {
+                    message.reply(`something went wrong`);
+                    console.error(err);
+                });
                 break;
             
             case 'update_province':
