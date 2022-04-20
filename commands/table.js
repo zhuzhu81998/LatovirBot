@@ -98,6 +98,9 @@ module.exports = {
             f_gold: {
                 type: Sequelize.DataTypes.NUMBER,
                 unique: false
+            },
+            f_mod_gold: {
+                type: Sequelize.DataTypes.NUMBER
             }
         }
         return rFactions;

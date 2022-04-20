@@ -50,13 +50,13 @@ window.onload = function() {
                 document.getElementById("list_armies").innerText = data_armies;
             });
             (async () => {
-                let data_factions = `the list of factions:\nFaction ID - Player ID - Gold\n`;
+                let data_factions = `the list of factions:\nFaction ID - Player ID - Gold - Gold Mod\n`;
                 const list_factions = await factions.findAll({})
                 .catch(err => { 
                     data_factions = err;
                 });
                 for(let i = 0; list_factions[i] != undefined; i++){
-                    data_factions += `${i+1}. **${list_factions[i].get('f_id')}** - ${list_factions[i].get('f_name')} - <@${list_factions[i].get('f_player_discord')}> - ${list_factions[i].get('f_gold')}\n`;
+                    data_factions += `${i+1}. **${list_factions[i].get('f_id')}** - ${list_factions[i].get('f_name')} - <@${list_factions[i].get('f_player_discord')}> - ${list_factions[i].get('f_gold')} - ${list_factions[i].get('f_mod_gold')}\n`;
                 }
                 return data_factions;
             })()

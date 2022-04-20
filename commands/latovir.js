@@ -32,7 +32,6 @@ module.exports = {
             attacker_army_strength += (attacker_army_id_array[attacker_number].get('a_strength') * (1 + Math.floor(attacker_army_id_array[attacker_number].get('a_level')) * 0.1));
             attacker_basic_strength += attacker_army_id_array[attacker_number].get('a_strength');
         }
-        //console.log(attacker_basic_strength);
         let attacker_army_quota = new Array(attacker_number);
         for(let i = 0; attacker_army_id_array[i] != undefined; i++){
             attacker_army_quota[i] = attacker_army_id_array[i].get('a_strength') / attacker_army_strength;
@@ -44,7 +43,6 @@ module.exports = {
             defender_army_strength += (defender_army_id_array[defender_number].get('a_strength') * (1 + Math.floor(defender_army_id_array[defender_number].get('a_level')) * 0.1));
             defender_basic_strength += defender_army_id_array[defender_number].get('a_strength');
         }
-        //console.log(defender_basic_strength);
         let defender_army_quota = new Array(defender_number);
         for(let i = 0; defender_army_id_array[i] != undefined; i++){
             defender_army_quota[i] = defender_army_id_array[i].get('a_strength') / defender_army_strength;
@@ -54,7 +52,6 @@ module.exports = {
         attacker_army_strength += (attacker_army_strength * a_army_mod);
         const sum_army_strength = attacker_army_strength + defender_army_strength;
         const sum_army_basic_strength = attacker_basic_strength + defender_basic_strength;
-        //console.log(defender_army_strength);
         let victory_basic_prob = attacker_army_strength / (attacker_army_strength + defender_army_strength);
         if(attacker_army_strength > defender_army_strength){
             victory_basic_prob = 0.5 + Math.pow((0.5 * attacker_army_strength - 0.5 * defender_army_strength) / (sum_army_strength), 1.3);
@@ -63,7 +60,6 @@ module.exports = {
             victory_basic_prob = 0.5 - Math.pow((0.5 * defender_army_strength - 0.5 * attacker_army_strength) / (sum_army_strength), 1.3);
         }
         let victory_var_prob = this.bin_distri();
-        //console.log(victory_var_prob);
         const victory_real_prob = victory_basic_prob + victory_var_prob;
         const loss_variable = Math.random() / 2;
         let loss_ratio = victory_real_prob + 0.5;
@@ -74,14 +70,9 @@ module.exports = {
             loss_ratio = 0.55;
         }
         let attacker_loss = Math.round((sum_army_basic_strength * loss_variable) / (1 + loss_ratio));
-        //attacker_loss -= (attacker_army_strength - attacker_basic_strength);
-        //if(attacker_loss){
-
-        //}
         const defender_loss = Math.round((loss_ratio * sum_army_basic_strength * loss_variable) / (1 + loss_ratio));
         if(victory_real_prob > 0.5){
             //attacker wins
-            
             message.reply(`Attacker: ${attacker_army_strength}, ${defender_army_strength} Attacker Wins!, Attacker Loss: ${attacker_loss}, Defender Loss: ${defender_loss}`);
         }
         else if(victory_real_prob < 0.5) {
@@ -89,7 +80,7 @@ module.exports = {
             message.reply(`Attacker: ${attacker_army_strength}, ${defender_army_strength} Defender Wins!, Attacker Loss: ${attacker_loss}, Defender Loss: ${defender_loss}`);
         }
         else {
-            //idk
+            message.reply(`Its a tie`);
         }
         (async () => {
             for(let i = 0; i < attacker_number; i++){
@@ -111,9 +102,6 @@ module.exports = {
                 }
             }
         })();
-
-        console.log(victory_basic_prob);
-        console.log(victory_real_prob);
     },
 
     execute(message, args, memory, provincesdb, factionsdb, armiesdb, gamedb){
@@ -168,7 +156,8 @@ module.exports = {
                                     f_id: args[0],
                                     f_name: args[1],
                                     f_player_discord: args[2],
-                                    f_gold: args[3]
+                                    f_gold: args[3],
+                                    f_mod_gold: args[4]
                                 }).catch( err => { console.error(err); });
         
                                 return newfaction;
@@ -225,7 +214,7 @@ module.exports = {
                         break;
                 }
                 break;
-            
+
             case 'delete':
                 switch(args.shift().toLowerCase()){
                     case 'army':
@@ -301,7 +290,7 @@ module.exports = {
                 break;
 
             case 'list_factions':
-                let data2 = `the list of factions:\nFaction ID - Player ID - Gold\n`;
+                let data2 = `the list of factions:\nFaction ID - Player ID - Gold - Gold Mod\n`;
                 try {
                     (async () => {
                         const list_factions = await factions.findAll({})
@@ -310,7 +299,7 @@ module.exports = {
                             console.error(err);
                         });
                         for(let i = 0; list_factions[i] != undefined; i++){
-                            data2 += `${i+1}. **${list_factions[i].get('f_id')}** - ${list_factions[i].get('f_name')} - <@${list_factions[i].get('f_player_discord')}> - ${list_factions[i].get('f_gold')}\n`;
+                            data2 += `${i+1}. **${list_factions[i].get('f_id')}** - ${list_factions[i].get('f_name')} - <@${list_factions[i].get('f_player_discord')}> - ${list_factions[i].get('f_gold')} - ${list_factions[i].get('f_mod_gold')}\n`;
                         }
                         message.reply(data2, { split: true });
                     })();
@@ -406,9 +395,14 @@ module.exports = {
                                         });
                                         let income_oth_prov = 0;
                                         for(let k = 0; other_provinces[k] != undefined; k++){
-                                            income_oth_prov += other_provinces[k].get('p_income');
+                                            if(other_provinces[k].get('p_autonom') == 1){
+                                                income_oth_prov += other_provinces[k].get('p_income') * (1 + other_provinces[k].get('p_level') * 0.1) * 0.2;
+                                            }
+                                            else{
+                                                income_oth_prov += other_provinces[k].get('p_income') * (1 + other_provinces[k].get('p_level') * 0.1);
+                                            }
                                         }
-                                        f_money += (income_oth_prov / 11) * (1 + f_provinces[j].get('p_level') * 0.1) * 0.5;
+                                        f_money += (income_oth_prov / 11) * 0.5;
                                     }
                                     else{
                                         if(f_provinces[j].get('p_autonom') == 1){
@@ -419,7 +413,8 @@ module.exports = {
                                         }
                                     }
                                 }
-                                const result = await factions.update({ f_gold: f_money }, { where: { f_id: cur_f_id } });
+                                const res_money = Math.round(f_money * list_factions[i].get('f_mod_gold') * 10) / 10 + list_factions[i].get('f_gold');
+                                const result = await factions.update({ f_gold: res_money }, { where: { f_id: cur_f_id } });
                                 return result;
                             })()
                             .then(result => {
@@ -476,6 +471,35 @@ module.exports = {
                         p_lord: args[4],
                         p_army_modification: args[5],
                         p_income: args[6] }, { where: { p_id: args[0] } });
+                    if(result != 1){
+                        throw 'unique error';
+                    }
+                    return result;
+                })().then(result => {
+                    if(result != undefined && result != null){
+                        message.react('👌')
+                        .catch(err => {
+                            console.error(err);
+                        });
+                    }
+                    else{
+                        message.reply(`something went wrong`);
+                    }
+                })
+                .catch(err => {
+                    message.reply(`something went wrong`);
+                    console.error(err);
+                });
+                break;
+
+            case 'update_faction':
+                (async () => {
+                    const result = await factions.update({ 
+                        f_name: args[1],
+                        f_player_discord: args[2],
+                        f_gold: args[3],
+                        f_mod_gold: args[4]
+                    }, { where: { f_id: args[0] } });
                     if(result != 1){
                         throw 'unique error';
                     }
