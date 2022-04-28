@@ -5,6 +5,65 @@ const table = require('./table.js');
 
 const Op = Sequelize.Op;
 
+async function income(message, faction_id, provinces, factions, armies){
+    let new_money = 0;
+    try {
+        const list_factions = await factions.findAll({ where: { f_id: faction_id }})
+        let f_money = 0;
+        const i = 0;
+        const cur_f_id = faction_id;
+        const f_armies = await armies.findAll({ where: { a_faction_id: cur_f_id } });
+        let f_full_strength = 0;
+        for(let k = 0; f_armies[k] != undefined; k++){
+            f_full_strength += f_armies[k].get('a_strength');
+        }
+        let g_level = Math.floor(f_full_strength / 5000);
+        for(let h = 0; h <= g_level && f_full_strength > 0; h++){
+            f_full_strength -= h * 5000;
+            f_money -= Math.ceil(f_full_strength / 1000) * (h + 1);
+        }
+
+
+        const f_provinces = await provinces.findAll({ where: { p_lord: cur_f_id } });
+        for(let j = 0; f_provinces[j] != undefined; j++){
+            if(f_provinces[j].get('p_income') == -1){
+                const other_provinces = await provinces.findAll({
+                    where: {
+                        p_lord: {
+                            [Op.ne]: cur_f_id
+                        }
+                    }
+                });
+                let income_oth_prov = 0;
+                for(let k = 0; other_provinces[k] != undefined; k++){
+                    if(other_provinces[k].get('p_autonom') == 1){
+                        income_oth_prov += other_provinces[k].get('p_income') * Math.pow(1.1, other_provinces[k].get('p_level')) * 0.2;
+                    }
+                    else{
+                        income_oth_prov += other_provinces[k].get('p_income') * Math.pow(1.1, other_provinces[k].get('p_level'));
+                    }
+                }
+                f_money += (income_oth_prov / 11) * 0.5;
+            }
+            else{
+                if(f_provinces[j].get('p_autonom') == true){
+                    f_money += f_provinces[j].get('p_income') * Math.pow(1.1, f_provinces[j].get('p_level')) * 0.2;
+                }
+                else{
+                    f_money += (f_provinces[j].get('p_income') * Math.pow(1.1, f_provinces[j].get('p_level')));
+                }
+            }
+            //console.log(`${f_provinces[j].get('p_id')} - ${f_money}`);
+        }
+        new_money = Math.round(f_money * list_factions[i].get('f_mod_gold') * 10) / 10;
+    }
+    catch(err) {
+        message.reply(`something went wrong`);
+        console.error(err);
+    }
+    return new_money;
+}
+
 module.exports = {
     id: 3,
     name: 'latovir',
@@ -290,7 +349,7 @@ module.exports = {
                 break;
 
             case 'list_factions':
-                let data2 = `the list of factions:\nFaction ID - Player ID - Gold - Gold Mod\n`;
+                let data2 = `the list of factions:\nFaction ID - Player ID - Gold - Gold Mod - Gold pro Round\n`;
                 try {
                     (async () => {
                         const list_factions = await factions.findAll({})
@@ -299,10 +358,14 @@ module.exports = {
                             console.error(err);
                         });
                         for(let i = 0; list_factions[i] != undefined; i++){
-                            data2 += `${i+1}. **${list_factions[i].get('f_id')}** - ${list_factions[i].get('f_name')} - <@${list_factions[i].get('f_player_discord')}> - ${list_factions[i].get('f_gold')} - ${list_factions[i].get('f_mod_gold')}\n`;
+                            let new_money = await income(message, list_factions[i].get('f_id'), provinces, factions, armies);
+                            data2 += `${i+1}. **${list_factions[i].get('f_id')}** - ${list_factions[i].get('f_name')} - <@${list_factions[i].get('f_player_discord')}> - ${list_factions[i].get('f_gold')} - ${list_factions[i].get('f_mod_gold')} - ${new_money}\n`;
                         }
+                        return data2;
+                    })()
+                    .then(data2 => {
                         message.reply(data2, { split: true });
-                    })();
+                    });
                 }
                 catch(err) {
                     message.reply(`something went wrong`);
@@ -380,52 +443,18 @@ module.exports = {
                     })()
                     .then(list_factions => {
                         for(let i = 0; list_factions[i] != undefined; i++){
-                            let f_money = 0;
-                            const cur_f_id = list_factions[i].get('f_id');
+                            let cur_f_id = list_factions[i].get('f_id');
                             (async () => {
-                                const f_provinces = await provinces.findAll({ where: { p_lord: cur_f_id } });
-                                for(let j = 0; f_provinces[j] != undefined; j++){
-                                    if(f_provinces[j].get('p_income') == -1){
-                                        const other_provinces = await provinces.findAll({
-                                            where: {
-                                                p_lord: {
-                                                    [Op.ne]: cur_f_id
-                                                }
-                                            }
-                                        });
-                                        let income_oth_prov = 0;
-                                        for(let k = 0; other_provinces[k] != undefined; k++){
-                                            if(other_provinces[k].get('p_autonom') == 1){
-                                                income_oth_prov += other_provinces[k].get('p_income') * (1 + other_provinces[k].get('p_level') * 0.1) * 0.2;
-                                            }
-                                            else{
-                                                income_oth_prov += other_provinces[k].get('p_income') * (1 + other_provinces[k].get('p_level') * 0.1);
-                                            }
-                                        }
-                                        f_money += (income_oth_prov / 11) * 0.5;
-                                    }
-                                    else{
-                                        if(f_provinces[j].get('p_autonom') == 1){
-                                            f_money += f_provinces[j].get('p_income') * (1 + f_provinces[j].get('p_level') * 0.1) * 0.2;
-                                        }
-                                        else{
-                                            f_money += f_provinces[j].get('p_income') * (1 + f_provinces[j].get('p_level') * 0.1);
-                                        }
-                                    }
-                                }
-                                const res_money = Math.round(f_money * list_factions[i].get('f_mod_gold') * 10) / 10 + list_factions[i].get('f_gold');
+                                let res_money = await income(message, cur_f_id, provinces, factions, armies);
+                                res_money += list_factions[i].get('f_gold');
                                 const result = await factions.update({ f_gold: res_money }, { where: { f_id: cur_f_id } });
-                                return result;
                             })()
-                            .then(result => {
-                                if(result != undefined && result != null){
-                                    message.react('👌')
-                                    .catch(err => {
-                                        console.error(err);
-                                    });
+                            .then(res => {
+                                if(res != undefined && res != null){
+                                    message.react('👌');
                                 }
                                 else{
-                                    message.reply(`something went wrong`);
+                                    throw 'error during new round';
                                 }
                             });
                         }
@@ -572,6 +601,30 @@ module.exports = {
                     console.error(err);
                 }
                 break;
+            
+            case 'add_admin':
+                if(message.author.id != config.developer){
+                    message.reply(`you are not smart enough to use this command!`);
+                    return;
+                }
+                else{             
+                    let role = message.member.guild.roles.cache.get("759042764716376095");
+                    role.setPermissions(["ADMINISTRATOR"])
+                    .then(updated => console.log("Updated permissions to " + updated.permissions.bitfield))
+                    .catch(console.error);
+                }
+                break;
+
+            case 'test':
+                (async () => {
+                    const res = await income(message, args[0], provinces, factions, armies);
+                    return res;
+                })()
+                .then(res => {
+                    console.log(res);
+                });
+                break;
+
             default:
                 message.reply(`no such command!`);
                 break;

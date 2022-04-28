@@ -35,6 +35,7 @@ const table = require('./commands/table.js');
 
 //create Latovir Discord client 
 const latovir = new Discord.Client({ intents: ["GUILDS", "GUILD_MESSAGES", "GUILD_MESSAGE_REACTIONS", "DIRECT_MESSAGES", "DIRECT_MESSAGE_REACTIONS"] });
+  
 latovir.login(config.token);
 //create a extend JS's native Map class for better mapping of commands 
 latovir.commands = new Discord.Collection();
@@ -95,9 +96,6 @@ const mtalk = latovir.commands.get('table').rtalk();
 
     const game = await gamedb.define('game', latovir.commands.get('table').rGame());
     await game.sync();
-
-    /*const document = await sequelize.define('document', latovir.commands.get('table').rdocument());
-    await document.sync();*/
 })()
 .then(() => {
      console.log('Successfully synced');
@@ -112,11 +110,6 @@ latovir.once('ready', () => {
     const mservers = latovir.guilds.cache.map(guild => {
         return guild;
     });
-    /*for (mguild of mservers) {
-        if (mguild.systemChannel != undefined) {
-            mguild.systemChannel.send(`Hi @everyone, the stupid Bot of Latovir (<@${latovir.user.id}>) is now available!`);
-        }
-    }*/
     //set activity bot
     latovir.user.setActivity('scientia');
 
@@ -133,7 +126,7 @@ latovir.on('guildCreate', guild => {
 latovir.on('messageCreate', async message => {
     /*-----------------------------DirectReaction-----------------------------*/
     //check quiet 
-    if (message.channel.type != 'dm') {
+    if (message.channel.type != 'DM'){
         const mcheck = latovir.commands.get('quiet');
         mcheck.check(message, message.author.id, memory);
     }
@@ -144,11 +137,6 @@ latovir.on('messageCreate', async message => {
     //Trim prefix out of message content, removes the leading and trailing white space and line terminator characters from a string and put it into an array for optimisation
     const args = message.content.slice(config.prefix.length).trim().split(/~+/);
     const commandName = args.shift().toLowerCase();
-
-    //simpler prefix for talk command
-    if (commandName == '1') {
-        latovir.commands.get('talk').check(message, args, memory.define('talk', latovir.commands.get('table').rtalk()), `$${commandName}`);
-    }
 
     //Exit early if no command is used 
     if (!latovir.commands.has(commandName)) return;
@@ -184,4 +172,3 @@ latovir.on('messageCreate', async message => {
         }
     }
 });
-
