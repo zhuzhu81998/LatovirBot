@@ -53,7 +53,7 @@ async function income(message, faction_id, provinces, factions, armies){
                     f_money += (f_provinces[j].get('p_income') * Math.pow(1.1, f_provinces[j].get('p_level')));
                 }
             }
-            //console.log(`${f_provinces[j].get('p_id')} - ${f_money}`);
+            console.log(`${f_provinces[j].get('p_id')} - ${f_money}`);
         }
         new_money = Math.round(f_money * list_factions[i].get('f_mod_gold') * 10) / 10;
     }
@@ -72,7 +72,7 @@ module.exports = {
     description: 'only for playing',
     bin_distri(){
         let X = 0;
-        const n = 101;
+        const n = 201;
         const p = 0.5;
         for(let i = 0; i < n; i++){
             const v = Math.floor(Math.random() * 10);
@@ -132,11 +132,11 @@ module.exports = {
         const defender_loss = Math.round((loss_ratio * sum_army_basic_strength * loss_variable) / (1 + loss_ratio));
         if(victory_real_prob > 0.5){
             //attacker wins
-            message.reply(`Attacker: ${attacker_army_strength}, ${defender_army_strength} Attacker Wins!, Attacker Loss: ${attacker_loss}, Defender Loss: ${defender_loss}`);
+            message.reply(`Attacker: ${attacker_army_strength}, Defender: ${defender_army_strength} Attacker Wins!, Attacker Loss: ${attacker_loss}, Defender Loss: ${defender_loss}`);
         }
         else if(victory_real_prob < 0.5) {
             //defender wins
-            message.reply(`Attacker: ${attacker_army_strength}, ${defender_army_strength} Defender Wins!, Attacker Loss: ${attacker_loss}, Defender Loss: ${defender_loss}`);
+            message.reply(`Attacker: ${attacker_army_strength}, Defender: ${defender_army_strength} Defender Wins!, Attacker Loss: ${attacker_loss}, Defender Loss: ${defender_loss}`);
         }
         else {
             message.reply(`Its a tie`);
@@ -145,7 +145,7 @@ module.exports = {
             for(let i = 0; i < attacker_number; i++){
                 const new_strength = Math.round(attacker_army_id_array[i].get('a_strength') - attacker_loss * attacker_army_quota[i]);
                 const id = attacker_army_id_array[i].get('a_id');
-                const new_level = attacker_army_id_array[i].get('a_level') + (defender_loss * attacker_army_quota[i]) / 1000;
+                const new_level = attacker_army_id_array[i].get('a_level') + (defender_loss * attacker_army_quota[i]) / attacker_army_id_array[i].get('a_strength');
                 const result = await armies.update({ a_strength: new_strength, a_level: new_level }, { where: { a_id: id } });
                 if(result > 1){
                     throw 'unique error';
@@ -154,7 +154,7 @@ module.exports = {
             for(let i = 0; i < defender_number; i++){
                 const new_strength = Math.round(defender_army_id_array[i].get('a_strength') - defender_loss * defender_army_quota[i]);
                 const id = defender_army_id_array[i].get('a_id');
-                const new_level = defender_army_id_array[i].get('a_level') + (attacker_loss * defender_army_quota[i]) / 1000;
+                const new_level = defender_army_id_array[i].get('a_level') + (attacker_loss * defender_army_quota[i]) / defender_army_id_array[i].get('a_strength');
                 const result = await armies.update({ a_strength: new_strength, a_level: new_level }, { where: { a_id: id } });
                 if(result > 1){
                     throw 'unique error';
