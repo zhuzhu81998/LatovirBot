@@ -37,7 +37,7 @@ async function income(message, faction_id, provinces, factions, armies){
                 let income_oth_prov = 0;
                 for(let k = 0; other_provinces[k] != undefined; k++){
                     if(other_provinces[k].get('p_autonom') == 1){
-                        income_oth_prov += other_provinces[k].get('p_income') * Math.pow(1.1, other_provinces[k].get('p_level')) * 0.2;
+                        income_oth_prov += other_provinces[k].get('p_income') * (other_provinces[k].get('p_level') * 0.1 + 0.2);
                     }
                     else{
                         income_oth_prov += other_provinces[k].get('p_income') * Math.pow(1.1, other_provinces[k].get('p_level'));
@@ -47,7 +47,7 @@ async function income(message, faction_id, provinces, factions, armies){
             }
             else{
                 if(f_provinces[j].get('p_autonom') == true){
-                    f_money += f_provinces[j].get('p_income') * Math.pow(1.1, f_provinces[j].get('p_level')) * 0.2;
+                    f_money += f_provinces[j].get('p_income') * (f_provinces[j].get('p_level') * 0.1 + 0.2);
                 }
                 else{
                     f_money += (f_provinces[j].get('p_income') * Math.pow(1.1, f_provinces[j].get('p_level')));
